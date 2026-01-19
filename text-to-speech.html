@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Speech - Chuyển văn bản thành giọng nói</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        select, textarea, input[type="range"] {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+
+        .range-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .range-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .speak-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .speak-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .speak-btn:active {
+            transform: translateY(0);
+        }
+
+        .pause-btn {
+            background: #ffa726;
+            color: white;
+        }
+
+        .pause-btn:hover {
+            background: #fb8c00;
+            transform: translateY(-2px);
+        }
+
+        .stop-btn {
+            background: #ef5350;
+            color: white;
+        }
+
+        .stop-btn:hover {
+            background: #e53935;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .status.active {
+            display: block;
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status.paused {
+            display: block;
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status.error {
+            display: block;
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+            text-align: center;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 10px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Text to Speech</h1>
+        <p class="subtitle">Chuyển văn bản thành giọng nói</p>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="language">Ngôn ngữ / Language:</label>
+                <select id="language">
+                    <option value="vi-VN">🇻🇳 Tiếng Việt</option>
+                    <option value="en-US">🇺🇸 English (US)</option>
+                    <option value="en-GB">🇬🇧 English (UK)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="voice">Giọng nói / Voice:</label>
+                <select id="voice">
+                    <option value="">Đang tải...</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="rate">Tốc độ / Speed:</label>
+                <div class="range-group">
+                    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+                    <span class="range-value" id="rateValue">1.0</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="pitch">Cao độ / Pitch:</label>
+                <div class="range-group">
+                    <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">
+                    <span class="range-value" id="pitchValue">1.0</span>
+                </div>
+            </div>
+        </div>
+
+        <label for="text">Văn bản / Text:</label>
+        <textarea id="text" placeholder="Nhập văn bản bạn muốn chuyển thành giọng nói...&#10;Enter the text you want to convert to speech...">Xin chào! Đây là ứng dụng chuyển văn bản thành giọng nói. Hello! This is a text to speech application.</textarea>
+
+        <div class="buttons">
+            <button class="speak-btn" id="speakBtn">▶️ Phát / Speak</button>
+            <button class="pause-btn" id="pauseBtn" disabled>⏸️ Tạm dừng / Pause</button>
+            <button class="stop-btn" id="stopBtn" disabled>⏹️ Dừng / Stop</button>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Đang điều chỉnh...</div>
+        </div>
+
+        <div class="info">
+            💡 Mẹo: Bạn có thể điều chỉnh tốc độ và cao độ giọng nói. Ứng dụng hỗ trợ cả tiếng Việt và tiếng Anh!
+        </div>
+    </div>
+
+    <script>
+        // Kiểm tra hỗ trợ Web Speech API
+        if (!('speechSynthesis' in window)) {
+            alert('Trình duyệt của bạn không hỗ trợ Text-to-Speech. Vui lòng sử dụng Chrome, Edge, hoặc Safari.');
+        }
+
+        const synth = window.speechSynthesis;
+
+        // Stop any ongoing speech when page loads or reloads
+        synth.cancel();
+        let voices = [];
+        let currentUtterance = null;
+        let isPaused = false;
+        let currentText = '';
+        let currentCharIndex = 0;
+        let isAdjusting = false;
+
+        // Elements
+        const languageSelect = document.getElementById('language');
+        const voiceSelect = document.getElementById('voice');
+        const rateInput = document.getElementById('rate');
+        const pitchInput = document.getElementById('pitch');
+        const rateValue = document.getElementById('rateValue');
+        const pitchValue = document.getElementById('pitchValue');
+        const textArea = document.getElementById('text');
+        const speakBtn = document.getElementById('speakBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDiv = document.getElementById('status');
+        const loadingDiv = document.getElementById('loading');
+
+        // Load voices
+        function loadVoices() {
+            voices = synth.getVoices();
+            populateVoiceList();
+        }
+
+        // Populate voice list based on selected language
+        function populateVoiceList() {
+            const selectedLang = languageSelect.value;
+            voiceSelect.innerHTML = '';
+
+            const filteredVoices = voices.filter(voice =>
+                voice.lang.startsWith(selectedLang.split('-')[0])
+            );
+
+            if (filteredVoices.length === 0) {
+                filteredVoices.push(...voices.filter(voice => voice.lang.startsWith('en')));
+            }
+
+            filteredVoices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.setAttribute('data-lang', voice.lang);
+                option.setAttribute('data-name', voice.name);
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        // Update range values and apply real-time changes
+        rateInput.addEventListener('input', (e) => {
+            const newRate = parseFloat(e.target.value);
+            rateValue.textContent = newRate.toFixed(1);
+
+            // Apply real-time change by restarting if speaking
+            if (synth.speaking && !isPaused && !isAdjusting) {
+                restartWithNewSettings();
+            }
+        });
+
+        pitchInput.addEventListener('input', (e) => {
+            const newPitch = parseFloat(e.target.value);
+            pitchValue.textContent = newPitch.toFixed(1);
+
+            // Apply real-time change by restarting if speaking
+            if (synth.speaking && !isPaused && !isAdjusting) {
+                restartWithNewSettings();
+            }
+        });
+
+        // Restart speech with new settings from current position
+        function restartWithNewSettings() {
+            if (!currentUtterance || !synth.speaking) return;
+
+            isAdjusting = true;
+
+            // Show loading
+            loadingDiv.classList.add('active');
+            statusDiv.className = 'status';
+
+            synth.cancel();
+
+            // Wait a bit before restarting for smoother transition
+            setTimeout(() => {
+                // Create new utterance with remaining text
+                const remainingText = currentText.substring(currentCharIndex);
+                if (remainingText.trim().length === 0) {
+                    isAdjusting = false;
+                    loadingDiv.classList.remove('active');
+                    return;
+                }
+
+                currentUtterance = new SpeechSynthesisUtterance(remainingText);
+
+                // Get selected voice
+                const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+                const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+                if (selectedVoice) {
+                    currentUtterance.voice = selectedVoice;
+                }
+
+                currentUtterance.lang = languageSelect.value;
+                currentUtterance.rate = parseFloat(rateInput.value);
+                currentUtterance.pitch = parseFloat(pitchInput.value);
+
+                // Track character progress
+                currentUtterance.onboundary = (event) => {
+                    if (event.name === 'word') {
+                        currentCharIndex += event.charIndex;
+                    }
+                };
+
+                currentUtterance.onstart = () => {
+                    // Hide loading when speech starts
+                    loadingDiv.classList.remove('active');
+                    updateStatus('Đang phát...', 'active');
+                };
+
+                currentUtterance.onend = () => {
+                    if (!isAdjusting) {
+                        loadingDiv.classList.remove('active');
+                        updateStatus('Hoàn thành!', '');
+                        setTimeout(() => {
+                            statusDiv.className = 'status';
+                        }, 2000);
+                        speakBtn.disabled = false;
+                        pauseBtn.disabled = true;
+                        stopBtn.disabled = true;
+                        isPaused = false;
+                        pauseBtn.textContent = '⏸️ Tạm dừng / Pause';
+                        currentCharIndex = 0;
+                    }
+                };
+
+                currentUtterance.onerror = (event) => {
+                    if (!isAdjusting) {
+                        loadingDiv.classList.remove('active');
+                        updateStatus('Lỗi: ' + event.error, 'error');
+                        speakBtn.disabled = false;
+                        pauseBtn.disabled = true;
+                        stopBtn.disabled = true;
+                    }
+                };
+
+                synth.speak(currentUtterance);
+                isAdjusting = false;
+            }, 100);
+        }
+
+        // Language change
+        languageSelect.addEventListener('change', populateVoiceList);
+
+        // Update status
+        function updateStatus(message, type = '') {
+            statusDiv.textContent = message;
+            statusDiv.className = 'status';
+            if (type) {
+                statusDiv.classList.add(type);
+            }
+        }
+
+        // Speak function
+        function speak() {
+            if (synth.speaking && !isPaused) {
+                updateStatus('Đang phát. Vui lòng đợi...', 'error');
+                return;
+            }
+
+            if (isPaused) {
+                synth.resume();
+                isPaused = false;
+                updateStatus('Tiếp tục phát...', 'active');
+                pauseBtn.textContent = '⏸️ Tạm dừng / Pause';
+                return;
+            }
+
+            const text = textArea.value.trim();
+            if (text === '') {
+                updateStatus('Vui lòng nhập văn bản!', 'error');
+                return;
+            }
+
+            currentText = text;
+            currentCharIndex = 0;
+            currentUtterance = new SpeechSynthesisUtterance(text);
+
+            // Get selected voice
+            const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+            const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+            if (selectedVoice) {
+                currentUtterance.voice = selectedVoice;
+            }
+
+            currentUtterance.lang = languageSelect.value;
+            currentUtterance.rate = parseFloat(rateInput.value);
+            currentUtterance.pitch = parseFloat(pitchInput.value);
+
+            // Track character progress for real-time adjustments
+            currentUtterance.onboundary = (event) => {
+                if (event.name === 'word') {
+                    currentCharIndex = event.charIndex;
+                }
+            };
+
+            // Event handlers
+            currentUtterance.onstart = () => {
+                updateStatus('Đang phát...', 'active');
+                speakBtn.disabled = false;
+                pauseBtn.disabled = false;
+                stopBtn.disabled = false;
+            };
+
+            currentUtterance.onend = () => {
+                if (!isAdjusting) {
+                    updateStatus('Hoàn thành!', '');
+                    setTimeout(() => {
+                        statusDiv.className = 'status';
+                    }, 2000);
+                    speakBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    isPaused = false;
+                    pauseBtn.textContent = '⏸️ Tạm dừng / Pause';
+                    currentCharIndex = 0;
+                }
+            };
+
+            currentUtterance.onerror = (event) => {
+                if (!isAdjusting) {
+                    updateStatus('Lỗi: ' + event.error, 'error');
+                    speakBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = true;
+                }
+            };
+
+            synth.speak(currentUtterance);
+        }
+
+        // Pause function
+        function pause() {
+            if (synth.speaking && !isPaused) {
+                synth.pause();
+                isPaused = true;
+                updateStatus('Đã tạm dừng', 'paused');
+                pauseBtn.textContent = '▶️ Tiếp tục / Resume';
+            } else if (isPaused) {
+                synth.resume();
+                isPaused = false;
+                updateStatus('Tiếp tục phát...', 'active');
+                pauseBtn.textContent = '⏸️ Tạm dừng / Pause';
+            }
+        }
+
+        // Stop function
+        function stop() {
+            synth.cancel();
+            isPaused = false;
+            currentCharIndex = 0;
+            updateStatus('Đã dừng', '');
+            setTimeout(() => {
+                statusDiv.className = 'status';
+            }, 2000);
+            speakBtn.disabled = false;
+            pauseBtn.disabled = true;
+            stopBtn.disabled = true;
+            pauseBtn.textContent = '⏸️ Tạm dừng / Pause';
+        }
+
+        // Event listeners
+        speakBtn.addEventListener('click', speak);
+        pauseBtn.addEventListener('click', pause);
+        stopBtn.addEventListener('click', stop);
+
+        // Stop speech when leaving page
+        window.addEventListener('beforeunload', () => {
+            synth.cancel();
+        });
+
+        // Stop speech when page visibility changes (tab switch)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Optional: pause when tab is hidden
+                // synth.pause();
+            }
+        });
+
+        // Load voices on page load
+        loadVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+    </script>
+</body>
+</html>
